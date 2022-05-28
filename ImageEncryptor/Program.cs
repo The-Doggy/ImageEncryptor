@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Security.Cryptography;
 using SixLabors.ImageSharp;
@@ -51,18 +49,33 @@ namespace ImageEncryptor
         {
             aes.Mode = mode;
 
-            byte[] imageData;
-            Bitmap img = new Bitmap(inputFile);
-            using (MemoryStream from = new MemoryStream())
-            {
-                img.Save(from, ImageFormat.Bmp);
-                using (MemoryStream to = new MemoryStream())
-                {
+            // Create the file streams to handle the input and output files.
+            FileStream fin = new FileStream(inputFile, FileMode.Open, FileAccess.Read);
+            FileStream fout = new FileStream($"output_{mode}.jpg", FileMode.OpenOrCreate, FileAccess.Write);
+            fout.SetLength(0);
 
-                }
+            // Create variables to help with read and write.
+            byte[] bin = new byte[16];   // This is intermediate storage for the encryption.
+            long rdlen = 0;              // This is the total number of bytes written.
+            long totlen = fin.Length;    // This is the total length of the input file.
+            int len;                     // This is the number of bytes to be written at a time.
+
+            CryptoStream encStream = new CryptoStream(fout, aes.CreateEncryptor(aes.Key, aes.IV), CryptoStreamMode.Write);
+
+            Console.WriteLine($"Encrypting file {Path.GetFileName(fin.Name)}...");
+
+            // Read from the input file, then encrypt and write to the output file.
+            while (rdlen < totlen)
+            {
+                len = fin.Read(bin, 0, 16);
+                encStream.Write(bin, 0, len);
+                rdlen += len;
+                Console.WriteLine("{0} bytes processed", rdlen);
             }
 
-            
+            encStream.Close();
+            fout.Close();
+            fin.Close();
         }
     }
 }
